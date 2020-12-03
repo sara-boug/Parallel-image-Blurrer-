@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "parallelComputingProject",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"string": "cpp",
+			"iostream": "cpp",
+			"vector": "cpp",
+			"xstring": "cpp",
+			"iosfwd": "cpp"
+		}
+	}
+}

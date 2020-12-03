@@ -1,32 +1,16 @@
+#pragma once
+
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <stdio.h>
+#include<stdlib.h>
 #include <bits/stdc++.h>
 #include <sstream> 
-#define WIDTH 1280 //image height and width constants 
-#define HEIGHT 720
-#define MASK_SIZE 100
-/*
- This class describes the  coordinats that are available in the mask file  
- the mask file contains several lines, each line describes a rectangle such that : 
- <start_i> <start_j> <stop_i> <stop_j>
+#include "Rectangle.cpp"
+#include "Dimension.cpp"
+using namespace Dimension; 
 
-*/
-class Rectangle { 
-    public:
-      int start_i ; 
-      int start_j; 
-      int end_i; 
-      int end_j; 
-      Rectangle(int start_i_ , int start_j_, int end_i_, int end_j_){ 
-          start_i = start_i_; 
-          start_j = start_j_ ; 
-          end_i = end_i_; 
-          end_j = end_j_; 
-      }
-        
-};
 /* 
 This class handles the folwing functionalities : 
    - raw file reading and extracting its content 
@@ -35,16 +19,11 @@ This class handles the folwing functionalities :
   
 */
 class FileHandler {
-	public:
-	  char* input_file;  
-      char* mask_file;
-	  unsigned char image[WIDTH] [HEIGHT];
-      std::vector<Rectangle> rectangles;  // Rectangle List
-	  FileHandler( char* input_file_ , char* mask_file_) {
-      input_file = input_file_ ; 
-	  mask_file = mask_file_; 
+	  public : char* input_file;  
+      public:  char* mask_file;
+	  public: unsigned char image[HEIGHT][WIDTH];
+      public: std::vector<Rectangle> rectangles;  // Rectangle List
 
-	};
 public: void  readImage() {
 	    FILE* file = fopen(input_file, "rb");
         if(!file ) { 
@@ -76,7 +55,7 @@ public: int  readMask() {
             for(std::string line ; iss >> line; ) { 
                 result.push_back(line);
             } 
-            // if there are less than 4 values then the process would be aborted 
+            // If there are less than 4 values then the process would be aborted 
 
             if ( result.size() == 4 ){                
                 Rectangle rectangle(toInt(result[0]),
@@ -95,16 +74,26 @@ public: int  readMask() {
     // returns 1 in the case when the whole process succeeds
     return 1 ;
     
-}
+};
 /* This method is used to convert string value to int  */ 
 private: int toInt(std::string str ){ 
     std::stringstream intValue(str); 
     int number = 0 ; 
     intValue >> number ; 
     return number; 
+};
+/*  this method recieves as an input the 2D array as an input */
 
+
+// simple getters
+public: std::vector<Rectangle> getMaskArray() { 
+    return rectangles ; 
+};
+
+public: int setImage(int i , int j , int value ) { 
+   return   image[j][i] = 0; 
 }
-public: void  columnAvg(int n) {  // avergaing the image column with space n (i-n, j-n) to (i+n, j+n) 
-
- };
+/*public:  void getImageArray() { 
+    return image ; 
+}*/
 };

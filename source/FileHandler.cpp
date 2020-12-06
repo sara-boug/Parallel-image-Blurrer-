@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 #include <stdio.h>
-#include<stdlib.h>
+#include <stdlib.h>
 #include <bits/stdc++.h>
 #include <sstream> 
 #include "Rectangle.cpp"
@@ -82,8 +82,6 @@ private: int toInt(std::string str ){
     intValue >> number ; 
     return number; 
 };
-/*  this method recieves as an input the 2D array as an input */
-
 
 // simple getters
 public: std::vector<Rectangle> getMaskArray() { 
@@ -93,7 +91,4 @@ public: std::vector<Rectangle> getMaskArray() {
 public: int setImage(int i , int j , int value ) { 
    return   image[j][i] = 0; 
 }
-/*public:  void getImageArray() { 
-    return image ; 
-}*/
 };

@@ -20,9 +20,7 @@ int main()
      fileHandler.readImage(); 
      fileHandler.readMask(); 
      Blurrer blurrer(fileHandler,10); 
-     blurrer.setImage(); 
-     blurrer.setImage();
-     blurrer.blurr();
+     blurrer.parallelBlurr(); 
      blurrer.writeToFile(output_file_name); 
      printf("Hello World!\n") ;
 

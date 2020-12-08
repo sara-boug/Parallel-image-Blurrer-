@@ -70,7 +70,6 @@ public: int  readMask() {
             }
          }
     }
-    std::cout <<  rectangles.size() << "\n";
     // returns 1 in the case when the whole process succeeds
     return 1 ;
     

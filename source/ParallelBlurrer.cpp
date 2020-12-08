@@ -81,7 +81,7 @@ public:void parallelBlurr(char* input_file , char * output_file) {
                 0 ,      // root 
                 MPI_COMM_WORLD);
     blurr_(sub_rect, rect_per_process , input_file , output_file) ; 
-  /*
+  
     std::vector<int> vec = 
     sub_mask_result =   vec.data(); // getting the array the the corresponds to
     int array_size = 1000;
@@ -114,7 +114,7 @@ public:void parallelBlurr(char* input_file , char * output_file) {
            
           std::cout<< n <<"\n"; 
       } 
-    }*/
+    }
     
     // cleaning up 
     free(sub_rect);
@@ -123,3 +123,78 @@ public:void parallelBlurr(char* input_file , char * output_file) {
 
 }
 
+
+
+public:void parallelBlurr2() { 
+ // setup the environment
+ MPI_Init( NULL , NULL);
+ int world_rank  ; 
+ MPI_Comm_rank( MPI_COMM_WORLD, &world_rank);
+ int world_size ;
+ MPI_Comm_size( MPI_COMM_WORLD ,  &world_size);
+ // environmnet set up 
+ int pixel_per_process; 
+ int * all_image_parts; 
+ int * data =NULL ; 
+ 
+    if(world_rank == 0 ) { // Master 
+          pixel_per_process = ( HEIGHT * WIDTH / WIDTH *  world_size ) ; 
+      
+          data= image_ ; 
+     }  
+    // Allocating memory buffers for the rectangles 
+    int *sub_image =( int*) malloc( sizeof( int) *  pixel_per_process);
+    MPI_Scatter( data,  // root process: Master
+                 pixel_per_process , // elements per process 
+                 MPI_INT ,    // data type in the root process
+                 sub_image ,      // the allocated memory buffer for each process 
+                 pixel_per_process , 
+                MPI_INT,
+                0 ,      // root 
+                MPI_COMM_WORLD);
+    //blurr_(sub_rect, rect_per_process , input_file , output_file) ; 
+    int * sub_image2 = sub_image ; 
+    std::cout << world_rank << "\n";
+  
+    MPI_Datatype rtype; 
+    MPI_Type_contiguous( pixel_per_process , MPI_INT, &rtype ); 
+    MPI_Type_commit( &rtype ); 
+
+    int* all_mask_result = NULL ; 
+    if(world_rank ==0  ) { 
+        all_image_parts= ( int*) malloc( sizeof( int) * world_size* pixel_per_process  );
+    }
+    MPI_Gather( &sub_image2,
+                pixel_per_process ,  // send count 
+                MPI_INT  ,
+                all_image_parts, 
+                1, 
+                rtype,
+                0,
+               MPI_COMM_WORLD);
+    std::cout<<"HELLOOO"<< "\n"; 
+
+    // cleaning up 
+    MPI_Barrier( MPI_COMM_WORLD);
+    MPI_Finalize();
+
+}
+    private: void  oneColumnAvg2(int i , int j ) { 
+      int start_j = horizontalBorder( j-neighbourhood ) ;
+      int start_i = verticalBorder(i-neighbourhood) ; 
+      int end_j =   horizontalBorder(j + neighbourhood); 
+      int end_i =   verticalBorder(i + neighbourhood); 
+      // average = sum/ number
+      int sum =0 ; // Will be used to keep track of the value in order to average them in the end 
+      int number =0;  // keep track of the number of pixels
+      for(int i1=start_i; i1<end_i; i1 ++ ){
+          for(int j1=start_j; j1<end_j ; j1++) { 
+              sum = sum + image[i1][j1]; 
+              number = number + 1 ; 
+
+          }
+      }
+     int average = (int) sum / number ; 
+     image[i][j] =  average ; 
+
+   }

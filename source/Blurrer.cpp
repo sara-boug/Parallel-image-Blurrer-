@@ -4,7 +4,6 @@
 #include "mpi.h"
 using namespace Dimension; 
 
-
 // this  object contains a column with coordinates i , j  accompanied with its content wich is the average
 class Average { 
    public:   int i ; 
@@ -15,7 +14,6 @@ class Average {
            j = j_; 
            avg = avg_ ; 
        }
-
 };
 
 class Blurrer { 
@@ -24,9 +22,6 @@ public:
     unsigned char image[HEIGHT][WIDTH];
     FileHandler fileHandler ; 
     int neighbourhood ; 
-    int width ; //  number of the image pixels horizontally 
-    int height; //  number of the image pixels vertically 
-
     Blurrer( FileHandler fileHandler_,int neighbourhood_ ) {     
        fileHandler = fileHandler_; 
        neighbourhood = neighbourhood_;
@@ -34,11 +29,9 @@ public:
    };
 /* This method is used to copy  the file handler  image to this file to  allow modifying it ! */ 
 public: void setImage() { 
-   int  n =0 ; 
    for (int i=0 ; i< WIDTH ; i++ ) { 
        for(int j=0 ; j<HEIGHT ; j++){ 
-         image[i][j] = fileHandler.image[j][i] ;    
-          n++ ;  
+         image[j][i] = fileHandler.image[j][i] ; 
        }
    }
 } 
@@ -46,7 +39,7 @@ public: void setImage() {
        - to a given area size n
        - to a given a given coordinates (i , j)
      and modify the 2D array provided  */
-   private: int oneColumnAvg(int i , int j ) { 
+   private: Average oneColumnAvg(int i , int j  , bool display) { 
       int start_j = horizontalBorder( j-neighbourhood ) ;
       int start_i = verticalBorder(i-neighbourhood) ; 
       int end_j =   horizontalBorder(j + neighbourhood); 
@@ -62,44 +55,10 @@ public: void setImage() {
           }
       }
      int average = (int) sum / number ; 
-     //image[i][j] =  average ; 
-     std::vector<int> avg  ; 
-     avg.push_back(i);
-     avg.push_back(j);
-     avg.push_back(average);
-     return average; 
-    // std::cout << (int ) sum / number << "  " ; 
+     if (display ) {  image[i][j] =  average ;  } 
+     Average avg(i , j ,average );
 
-   }
-
-      private: void  oneColumnAvg2(int i , int j ) { 
-            MPI_Init( NULL , NULL);
-    int world_rank  ; 
-    MPI_Comm_rank( MPI_COMM_WORLD, &world_rank);
-    int world_size ;
-    MPI_Comm_size( MPI_COMM_WORLD ,  &world_size);
-    // environmnet set up 
-    if ( world_rank == 0) {
-        printf("hello world");
-     } 
-      int start_j = horizontalBorder( j-neighbourhood ) ;
-      int start_i = verticalBorder(i-neighbourhood) ; 
-      int end_j =   horizontalBorder(j + neighbourhood); 
-      int end_i =   verticalBorder(i + neighbourhood); 
-      // average = sum/ number
-      int sum =0 ; // Will be used to keep track of the value in order to average them in the end 
-      int number =0;  // keep track of the number of pixels
-      for(int i1=start_i; i1<end_i; i1 ++ ){
-          for(int j1=start_j; j1<end_j ; j1++) { 
-              sum = sum + image[i1][j1]; 
-              number = number + 1 ; 
-
-          }
-      }
-     int average = (int) sum / number ; 
-     image[i][j] =  average ; 
-
-
+     return avg ; 
    }
 
    /*  Handling the overflow that may occur horizontally : 
@@ -132,13 +91,13 @@ public: void setImage() {
  public: void blurr() { 
     setImage() ; // setting up the 2D array 
     std::vector<Rectangle> rectangles = fileHandler.rectangles ; 
-    std::cout << fileHandler.rectangles.size() << "\n";   
+     
     for( int n =0 ; n < sizeof(rectangles) ; n++) { 
-        Rectangle rect = rectangles[n]; 
+        Rectangle rect = rectangles[0]; 
         for(int i = rect.start_i ; i< rect.end_i ; i++) { 
 
             for(int j= rect.start_j ; j<rect.end_j ; j++){ 
-               oneColumnAvg2(i , j); 
+               oneColumnAvg(i , j , true ); 
             }
 
         }
@@ -147,65 +106,23 @@ public: void setImage() {
 
 }
 
-private: std::vector<int>  blurr_(Rectangle* sub_rect , int rectangles_per_process) { 
-    std::cout<< sub_rect[0].start_i << "\n" ; 
-    std::vector<int> avg  ; 
+private: std::vector<Average> blurr_(Rectangle* sub_rect , int rectangles_per_process) { 
+  
+    std::vector<Average> results   ; 
+
     for( int n =0 ; n < rectangles_per_process ; n++) { 
         Rectangle rect = sub_rect[n]; 
         for(int i = rect.start_i ; i< rect.end_i ; i++) { 
              for(int j= rect.start_j ; j<rect.end_j ; j++){ 
-                 // std::vector<int> avg_one = oneColumnAvg(i , j) ; 
-                  //avg.insert(std::end(avg), std::begin( avg_one ), std::end( avg_one ));
-                 avg.push_back(oneColumnAvg(i , j)); // concating the array 
+                  //std::vector<int> avg_one = oneColumnAvg(i , j) ; 
+                 results.push_back( oneColumnAvg(i , j , false ) ); // concating the array 
              }
-
         }
-
     }
-    return avg; 
-
+   return results ; 
 }
 
-
-public:void parallelBlurr2() { 
-    setImage() ; 
-    std::vector<Rectangle> rectangles = fileHandler.rectangles ; 
-    int value = fileHandler.rectangles.size();
-    int * send ; 
-    int *recv; 
-        // setup the environment
-    MPI_Init( NULL , NULL);
-    int world_rank  ; 
-    MPI_Comm_rank( MPI_COMM_WORLD, &world_rank);
-    int world_size ;
-    MPI_Comm_size( MPI_COMM_WORLD ,  &world_size);
-    // environmnet set up 
-    if ( world_rank == 0) {
-                MPI_Send(image,  HEIGHT*WIDTH,  MPI_INT , 1, 0, MPI_COMM_WORLD);
-
-    } else {
-            recv = (int*) malloc( sizeof(int) * HEIGHT*WIDTH);
-
-//            MPI_Recv( , HEIGHT*WIDTH, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
-    
-    }
-    // cleaning up 
-    MPI_Barrier( MPI_COMM_WORLD);
-    MPI_Finalize();
-
-
-
-};
-
-/*
-  The process of parallelizing the blurring consists of : 
-  - initially setting up the imagge array in the master process 
-  - using MPI_SCATTER to assign a rectangle to each process  which are the slaves 
-  - each process will blurr its part in parallel with the others 
-  - gathering the whole through MPI_GATHER
-*/
 public:void parallelBlurr() { 
- 
 
  // setup the environment
  MPI_Init( NULL , NULL);
@@ -216,21 +133,21 @@ public:void parallelBlurr() {
  // environmnet set up 
 
 
-   int array_size ;
   // initializing the rectangles 
    Rectangle* rectangles ; 
-   int* sub_mask_result ;
-   int rect_per_process = 1 ;  // defines the number of rectangles that would be assigned to each process  
-  
-  
+   int rect_per_process  ;  // defines the number of rectangles that would be assigned to each process  
+   std::vector<Average> modified_part; 
+   Average * modified_part_array ;
+   int size ;
+   
     // setting up custom datatype for each rectangle (considering that rectangle is made of 4 integer points )
     MPI_Datatype MPI_Rectangle  ; 
-    MPI_Type_contiguous( 4 , MPI_INT, &MPI_Rectangle);
+    MPI_Type_contiguous( 4, MPI_INT, &MPI_Rectangle);
     MPI_Type_commit( &MPI_Rectangle);
    
     if(world_rank == 0 ) { // Master 
         rectangles  = fileHandler.rectangles.data();  // setting up the rectangle array 
-        
+         rect_per_process = (int) (fileHandler.rectangles.size() / world_size ); 
     }  
     // Allocating memory buffers for the rectangles 
     Rectangle *sub_rect =(Rectangle *) malloc( sizeof(Rectangle) * rect_per_process);
@@ -243,50 +160,41 @@ public:void parallelBlurr() {
                 0 ,      // root 
                 MPI_COMM_WORLD);
     
-    std::vector<int> vec = blurr_(sub_rect, rect_per_process) ; 
-    sub_mask_result =   vec.data(); // getting the array the the corresponds to
-    array_size =vec.size();
-          std::cout<<array_size <<"\n"; 
-
-    MPI_Datatype rtype; 
-    MPI_Type_contiguous( array_size , MPI_INT, &rtype ); 
-    MPI_Type_commit( &rtype ); 
-
-    int* all_mask_result = NULL ; 
+    modified_part = blurr_(sub_rect, rect_per_process ) ; 
+   
+    Average* all_modified_parts = NULL ; 
     if(world_rank ==0  ) { 
-
-        all_mask_result = (int*) malloc( sizeof(int) * world_size* array_size*10);
+            size = modified_part.size(); 
+            modified_part_array =  modified_part.data();  
+            all_modified_parts = (Average*) malloc( sizeof(Average) * size *world_size) ;
 
     }
 
+    MPI_Datatype MPI_Average ; 
+    MPI_Type_contiguous( 3, MPI_INT, &MPI_Average);
+    MPI_Type_commit( &MPI_Average);
 
-    MPI_Gather( sub_mask_result,
-                array_size,  // send count 
-                MPI_INT  ,
-                all_mask_result, 
-                1,  // nummber per process 
-                rtype,
+
+    MPI_Gather( modified_part_array,
+                size,  // send count 
+                MPI_Average ,
+                all_modified_parts, 
+                size, 
+               MPI_Average,
                 0,
-               MPI_COMM_WORLD);
-                 std::cout<<"HELLOOO"<< "\n"; 
+                MPI_COMM_WORLD);
 
     if (world_rank ==0)
-    {    
-        int n =0 ; 
-       while(n<world_size* array_size  ) {
-           std::cout << sub_mask_result[n] <<"\n"; 
-           //image[sub_mask_result[n]][sub_mask_result[n+1]] = sub_mask_result[n+2];
-           n=n +1; 
-      } 
+    {   
+            for(int n =0 ; n <size*world_size ; n++ ) { 
+                Average a = all_modified_parts[n];
+                image[a.i][a.j] = a.avg; 
+            }
     }
-    
     // cleaning up 
-    free(sub_rect);
-    MPI_Barrier( MPI_COMM_WORLD);
     MPI_Finalize();
 
 }
-
 
 
 };

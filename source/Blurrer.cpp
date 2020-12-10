@@ -4,7 +4,7 @@
 #include "mpi.h"
 using namespace Dimension; 
 
-// this  object contains a column with coordinates i , j  accompanied with its content wich is the average
+// This sub class contains a column with coordinates i , j  accompanied with its content wich is the average
 class Average { 
    public:   int i ; 
    public:   int j ; 
@@ -81,15 +81,20 @@ public: void setImage() {
 
    }
 
-   public: void writeToFile(char* path) { 
+   public: int  writeToFile(char* path) { 
     std::ofstream output_file(path) ; 
-    output_file.write((char*) &image , sizeof(image)); 
-    output_file.close(); 
+    if( ! output_file) { 
+        printf("output file not find "); 
+        return 0 ; 
+    } else {
+        output_file.write((char*) &image , sizeof(image)); 
+        output_file.close(); 
+       return 1 ; 
+    }
  };
 
 
  public: void blurr() { 
-    setImage() ; // setting up the 2D array 
     std::vector<Rectangle> rectangles = fileHandler.rectangles ; 
      
     for( int n =0 ; n < sizeof(rectangles) ; n++) { 
@@ -106,6 +111,7 @@ public: void setImage() {
 
 }
 
+
 private: std::vector<Average> blurr_(Rectangle* sub_rect , int rectangles_per_process) { 
   
     std::vector<Average> results   ; 
@@ -114,7 +120,6 @@ private: std::vector<Average> blurr_(Rectangle* sub_rect , int rectangles_per_pr
         Rectangle rect = sub_rect[n]; 
         for(int i = rect.start_i ; i< rect.end_i ; i++) { 
              for(int j= rect.start_j ; j<rect.end_j ; j++){ 
-                  //std::vector<int> avg_one = oneColumnAvg(i , j) ; 
                  results.push_back( oneColumnAvg(i , j , false ) ); // concating the array 
              }
         }
@@ -124,16 +129,15 @@ private: std::vector<Average> blurr_(Rectangle* sub_rect , int rectangles_per_pr
 
 public:void parallelBlurr() { 
 
- // setup the environment
+ //  Environment set up 
  MPI_Init( NULL , NULL);
  int world_rank  ; 
  MPI_Comm_rank( MPI_COMM_WORLD, &world_rank);
  int world_size ;
  MPI_Comm_size( MPI_COMM_WORLD ,  &world_size);
- // environmnet set up 
+ 
 
-
-  // initializing the rectangles 
+  // Initializing the rectangles 
    Rectangle* rectangles ; 
    int rect_per_process  ;  // defines the number of rectangles that would be assigned to each process  
    std::vector<Average> modified_part; 
@@ -145,7 +149,8 @@ public:void parallelBlurr() {
     MPI_Type_contiguous( 4, MPI_INT, &MPI_Rectangle);
     MPI_Type_commit( &MPI_Rectangle);
    
-    if(world_rank == 0 ) { // Master 
+   // Master is about to distrubute tasks equally among the  available processes  
+    if(world_rank == 0 ) { 
         rectangles  = fileHandler.rectangles.data();  // setting up the rectangle array 
          rect_per_process = (int) (fileHandler.rectangles.size() / world_size ); 
     }  
@@ -169,7 +174,8 @@ public:void parallelBlurr() {
             all_modified_parts = (Average*) malloc( sizeof(Average) * size *world_size) ;
 
     }
-
+    
+    // Creating  new Mpi data type that would corresponds to the 
     MPI_Datatype MPI_Average ; 
     MPI_Type_contiguous( 3, MPI_INT, &MPI_Average);
     MPI_Type_commit( &MPI_Average);
@@ -185,7 +191,7 @@ public:void parallelBlurr() {
                 MPI_COMM_WORLD);
 
     if (world_rank ==0)
-    {   
+    {   // Modifying the image 
             for(int n =0 ; n <size*world_size ; n++ ) { 
                 Average a = all_modified_parts[n];
                 image[a.i][a.j] = a.avg; 
@@ -193,7 +199,6 @@ public:void parallelBlurr() {
     }
     // cleaning up 
     MPI_Finalize();
-
 }
 
 

@@ -24,15 +24,15 @@ class FileHandler {
 	  public: unsigned char image[HEIGHT][WIDTH];
       public: std::vector<Rectangle> rectangles;  // Rectangle List
 
-public: void  readImage() {
+public: int  readImage() {
 	    FILE* file = fopen(input_file, "rb");
         if(!file ) { 
-            printf("no file found");
-            return ; 
+            printf("no file found \n");
+            return 0  ; 
         }else {
             fread(image, 1, WIDTH*HEIGHT, file);
             fclose(file); 
-           
+            return 1 ; 
         }
 };
 /* 
@@ -44,7 +44,7 @@ public: int  readMask() {
 	std::ifstream  mask(mask_file); 
     std::string line ; 
     if(! mask ) { 
-        printf("no file mask found");
+        printf("no file mask found \n");
         return 0 ; 
     }else {
         // Extracting the lines

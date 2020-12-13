@@ -5,7 +5,10 @@
 #include "Blurrer.cpp"
 #include<string>
 #include <mpi.h>
-
+/** 
+ * @author Bouglam sara 
+ *
+ * */
 int main(int argc , char * argv[])
 {    
      // extracting arguments from the command line 
@@ -47,7 +50,7 @@ int main(int argc , char * argv[])
                          i ++ ; 
 
                     }else  { 
-                    printf("INVALID ARGUMENT PROVIDED !!");
+                    printf("INVALID ARGUMENT PROVIDED !!\n");
                }
            }
            if(!mask|| !input|| !output) { 
@@ -72,6 +75,7 @@ int main(int argc , char * argv[])
                    blurrer.parallelBlurr();  // parallely 
                }
                // writing the obtained result to file 
+               //if file not found the the program will be aborted 
                if( blurrer.writeToFile(output_file)== 0) { return 0;} 
 
                }

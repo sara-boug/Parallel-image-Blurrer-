@@ -35,11 +35,11 @@ public: int  readImage() {
             return 1 ; 
         }
 };
-/* 
- In order to extract the values from the mask file given, we need first to
-  get the lines,  then we get the values that are sparated by space
-
-   */
+/** 
+ *In order to extract the values from the mask file given, we need first to
+ *get the lines,  then we get the values that are sparated by space  
+ * The program would be aborted in case the file does not respect the 4 values per line 
+**/
 public: int  readMask() { 
 	std::ifstream  mask(mask_file); 
     std::string line ; 

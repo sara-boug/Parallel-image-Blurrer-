@@ -1,4 +1,5 @@
 #pragma once
+// image dimensions
 namespace Dimension { 
   enum dimensions { 
        WIDTH = 1280 , 

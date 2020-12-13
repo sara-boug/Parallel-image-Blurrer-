@@ -1,2 +1,10 @@
 .vscode
 source/ a.out
+exec
+source/datas/mask1
+source/datas/police1.raw
+source/datas/police2.raw
+source/datas/police3.raw
+source/datas/police4.raw
+source/datas/output.raw
+

@@ -4,7 +4,10 @@
 #include "mpi.h"
 using namespace Dimension; 
 
-// This sub class contains a column with coordinates i , j  accompanied with its content wich is the average
+/**
+ *  This sub class contains a column with coordinates i , j  accompanied 
+ * with its content which is the average 
+ * */
 class Average { 
    public:   int i ; 
    public:   int j ; 
@@ -15,6 +18,10 @@ class Average {
            avg = avg_ ; 
        }
 };
+/**
+ *  This class performs the blurring, offerring two options either sequnetial blurring or parallel blurring 
+ * 
+ * */
 
 class Blurrer { 
   
@@ -36,9 +43,10 @@ public: void setImage() {
    }
 } 
    /* This methods averages  a single column according :
-       - to a given area size n
-       - to a given a given coordinates (i , j)
-     and modify the 2D array provided  */
+    *   - to a given area size n
+    *  - to a given a given coordinates (i , j)
+    * and modify the 2D array provided  
+    * */
    private: Average oneColumnAvg(int i , int j  , bool display) { 
       int start_j = horizontalBorder( j-neighbourhood ) ;
       int start_i = verticalBorder(i-neighbourhood) ; 
@@ -61,26 +69,30 @@ public: void setImage() {
      return avg ; 
    }
 
-   /*  Handling the overflow that may occur horizontally : 
-       if the value is negative : 0 is returned ; 
-       if the value  is supprior than the width : width-1 is returned 
-       which is considered as the suitable way to handle horizontal overflow*/
+   /**  Handling the overflow that may occur horizontally : 
+    *   if the value is negative : 0 is returned ; 
+    *   if the value  is supprior than the width : width-1 is returned 
+    *   which is considered as the suitable way to handle horizontal overflow
+    **/
    private: int horizontalBorder(int i ) { 
        if( i < 0 ) {   return 0 ;  }
        else if (i >= WIDTH) { return WIDTH-1 ; }
        else { return i; } //  nothing is done elsewise   
    }
-  /*  Handling the overflow that may occur vertically : 
-       if the value is negative : 0 is returned ; 
-       if the value  is supprior than the height : height-1 is returned 
-       which is considered as the suitable way to handle vertical overflow*/
+   /**  Handling the overflow that may occur vertically : 
+    *   if the value is negative : 0 is returned ; 
+    *   if the value  is supprior than the height : height-1 is returned 
+    *   which is considered as the suitable way to handle vertical overflow
+    **/
    private: int verticalBorder(int j) { 
        if( j < 0 ) {   return 0 ;  }
        else if (j>= HEIGHT) { return HEIGHT-1 ; }
        else { return j ;} //  nothing is done elsewise   
 
    }
-
+    /**
+     *  This method  is used to  write the image  to a given  file path
+     * */ 
    public: int  writeToFile(char* path) { 
     std::ofstream output_file(path) ; 
     if( ! output_file) { 
@@ -93,12 +105,14 @@ public: void setImage() {
     }
  };
 
-
+/** 
+ * This method represents a simple sequantial blurring 
+ */
  public: void blurr() { 
     std::vector<Rectangle> rectangles = fileHandler.rectangles ; 
      
     for( int n =0 ; n < sizeof(rectangles) ; n++) { 
-        Rectangle rect = rectangles[0]; 
+        Rectangle rect = rectangles[n]; 
         for(int i = rect.start_i ; i< rect.end_i ; i++) { 
 
             for(int j= rect.start_j ; j<rect.end_j ; j++){ 
@@ -111,13 +125,17 @@ public: void setImage() {
 
 }
 
-
+/** 
+ * This method recieves a number of rectangles and does the blurring accordingly, 
+ * used only for implementing the parallel blurring 
+ * returning Average object countaing i ,i coordinate and the avg obtained  at the spcific coorrdinates and neighbourhood 
+*/
 private: std::vector<Average> blurr_(Rectangle* sub_rect , int rectangles_per_process) { 
   
     std::vector<Average> results   ; 
 
     for( int n =0 ; n < rectangles_per_process ; n++) { 
-        Rectangle rect = sub_rect[n]; 
+        Rectangle rect = sub_rect[0]; 
         for(int i = rect.start_i ; i< rect.end_i ; i++) { 
              for(int j= rect.start_j ; j<rect.end_j ; j++){ 
                  results.push_back( oneColumnAvg(i , j , false ) ); // concating the array 
@@ -127,6 +145,7 @@ private: std::vector<Average> blurr_(Rectangle* sub_rect , int rectangles_per_pr
    return results ; 
 }
 
+// Im plementing the parallel blurring 
 public:void parallelBlurr() { 
 
  //  Environment set up 
@@ -150,13 +169,16 @@ public:void parallelBlurr() {
     MPI_Type_commit( &MPI_Rectangle);
    
    // Master is about to distrubute tasks equally among the  available processes  
-    if(world_rank == 0 ) { 
+    if(world_rank == 0 ) {  // Master 
         rectangles  = fileHandler.rectangles.data();  // setting up the rectangle array 
+        // in order to get an evne number of rectangles per process 
+        // the availabe rectangles are devided by the number of processes 
          rect_per_process = (int) (fileHandler.rectangles.size() / world_size ); 
     }  
     // Allocating memory buffers for the rectangles 
     Rectangle *sub_rect =(Rectangle *) malloc( sizeof(Rectangle) * rect_per_process);
-    MPI_Scatter( rectangles,  // root process: Master
+    // distributing the rectangles to processes evenly 
+    MPI_Scatter( rectangles, // rectangle array to be distributed
                  rect_per_process, // elements per process 
                  MPI_Rectangle ,    // data type in the root process
                  sub_rect ,      // the allocated memory buffer for each process 
@@ -169,25 +191,30 @@ public:void parallelBlurr() {
    
     Average* all_modified_parts = NULL ; 
     if(world_rank ==0  ) { 
-            size = modified_part.size(); 
+            // The vector should be transformed to an array, 
+            //since the returned value from the blurr_ method is a vector which can not be accepted 
+
             modified_part_array =  modified_part.data();  
-            all_modified_parts = (Average*) malloc( sizeof(Average) * size *world_size) ;
+            size = modified_part.size(); 
+
+            // allocating memory for the gather procedure 
+            all_modified_parts = (Average*) malloc( sizeof(Average) * size *world_size) ; 
 
     }
     
-    // Creating  new Mpi data type that would corresponds to the 
+    // Creating  new Mpi data type that would corresponds to the Average object 
     MPI_Datatype MPI_Average ; 
     MPI_Type_contiguous( 3, MPI_INT, &MPI_Average);
     MPI_Type_commit( &MPI_Average);
-
-
-    MPI_Gather( modified_part_array,
+    
+    
+    MPI_Gather( modified_part_array, // the array generated previously 
                 size,  // send count 
-                MPI_Average ,
-                all_modified_parts, 
-                size, 
+                MPI_Average , // the custom data type created  
+                all_modified_parts, // the allocated memory 
+                size,  // size of the element that is returned per process  
                MPI_Average,
-                0,
+                0,   // the process to gather in data 
                 MPI_COMM_WORLD);
 
     if (world_rank ==0)
